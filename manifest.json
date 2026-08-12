@@ -1,0 +1,8 @@
+{
+    "display_name": "Base64 Prompt Transform",
+    "loading_order": 100,
+    "js": "index.js",
+    "author": "Local",
+    "version": "1.1.0",
+    "auto_update": false
+}
