@@ -101,7 +101,7 @@ let injectProtocolEnabled = true;
  * Defaults to OFF: retrying changes how errors surface in the UI, so it
  * is opt-in via the settings panel.
  */
-let autoRetryEnabled = false;
+let autoRetryEnabled = true;
 
 /**
  * Maximum automatic retries per user turn.
