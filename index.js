@@ -274,18 +274,19 @@ function encodeBase64Utf8(text) {
 const MIN_BARE_B64_LENGTH = 4;
 
 /**
- * Bare Base64 / Base64URL token detector.
+ * Bare Base64 token detector.
  *
  * Supports:
  *   Y29jaw==
  *   Y29jaw
- *   SGVsbG8td29ybGQ_
  *
- * Boundaries intentionally exclude characters that may legally occur
- * inside Base64/Base64URL tokens.
+ * Base64URL characters (- and _) are intentionally excluded here to prevent
+ * greedy matching from swallowing hyphenated English words (e.g. c2xpY2s-coated).
+ * The model is prompted to use standard Base64 (+ and /), so bare Base64URL
+ * support is unnecessary and causes ambiguity.
  */
 const BARE_B64_DECODE_RE =
-    /(?<![A-Za-z0-9+/_=-])[A-Za-z0-9+/_-]{4,}={0,2}(?![A-Za-z0-9+/_=-])/g;
+    /(?<![A-Za-z0-9+/=])[A-Za-z0-9+/]{4,}={0,2}(?![A-Za-z0-9+/=])/g;
 
 /**
  * Marker detector.
@@ -558,13 +559,6 @@ function isStrongBareBase64Candidate(
     }
 
     /*
-     * Base64URL-specific characters.
-     */
-    if (/[-_]/.test(candidate)) {
-        return true;
-    }
-
-    /*
      * Standard Base64 symbols.
      */
     if (/[+/]/.test(candidate)) {
@@ -653,6 +647,14 @@ function decodeB64Markers(text) {
     return text.replace(
         B64_MARKER_RE,
         (wholeMatch, encoded) => {
+            // If the content inside the marker is already plain text (not base64),
+            // just return the plain text to strip the marker.
+            // This happens when a message was aborted mid-stream and the regex
+            // pass already ran on the partial message, leaving markers around plain text.
+            if (isPrintableDecodedText(encoded) && !isLikelyBase64Token(encoded)) {
+                return encoded;
+            }
+
             const decoded = tryDecodeBase64Utf8(
                 encoded,
                 {
